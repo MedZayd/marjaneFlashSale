@@ -2,10 +2,13 @@ package com.nimbleways.springboilerplate.controllers;
 
 import com.nimbleways.springboilerplate.entities.Order;
 import com.nimbleways.springboilerplate.entities.Product;
+import com.nimbleways.springboilerplate.enums.ProductType;
 import com.nimbleways.springboilerplate.repositories.OrderRepository;
 import com.nimbleways.springboilerplate.repositories.ProductRepository;
-import com.nimbleways.springboilerplate.services.implementations.NotificationService;
+import com.nimbleways.springboilerplate.services.interfaces.NotificationService;
 import com.nimbleways.springboilerplate.utils.Annotations.SetupDatabase;
+import net.bytebuddy.asm.Advice;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -17,6 +20,7 @@ import static org.junit.Assert.assertEquals;
 
 // import com.fasterxml.jackson.databind.ObjectMapper;
 
+import static org.junit.Assert.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -24,6 +28,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 // Specify the controller class you want to test
@@ -32,7 +37,7 @@ import java.util.Set;
 @SetupDatabase
 @SpringBootTest
 @AutoConfigureMockMvc
-public class MyControllerIntegrationTests {
+public class OrderResourceIntegrationTests {
         @Autowired
         private MockMvc mockMvc;
 
@@ -55,8 +60,9 @@ public class MyControllerIntegrationTests {
                 mockMvc.perform(post("/orders/{orderId}/processOrder", order.getId())
                                 .contentType("application/json"))
                                 .andExpect(status().isOk());
-                Order resultOrder = orderRepository.findById(order.getId()).get();
-                assertEquals(resultOrder.getId(), order.getId());
+                Optional<Order> resultOrder = orderRepository.findById(order.getId());
+                Assertions.assertTrue(resultOrder.isPresent());
+                Assertions.assertEquals(resultOrder.get().getId(), order.getId());
         }
 
         private static Order createOrder(Set<Product> products) {
@@ -66,16 +72,17 @@ public class MyControllerIntegrationTests {
         }
 
         private static List<Product> createProducts() {
+                LocalDate now = LocalDate.now();
                 List<Product> products = new ArrayList<>();
-                products.add(new Product(null, 15, 30, "NORMAL", "USB Cable", null, null, null));
-                products.add(new Product(null, 10, 0, "NORMAL", "USB Dongle", null, null, null));
-                products.add(new Product(null, 15, 30, "EXPIRABLE", "Butter", LocalDate.now().plusDays(26), null,
-                                null));
-                products.add(new Product(null, 90, 6, "EXPIRABLE", "Milk", LocalDate.now().minusDays(2), null, null));
-                products.add(new Product(null, 15, 30, "SEASONAL", "Watermelon", null, LocalDate.now().minusDays(2),
-                                LocalDate.now().plusDays(58)));
-                products.add(new Product(null, 15, 30, "SEASONAL", "Grapes", null, LocalDate.now().plusDays(180),
-                                LocalDate.now().plusDays(240)));
+                products.add(Product.builder().leadTime(15).available(30).type(ProductType.NORMAL).name("USB Cable").build());
+                products.add(Product.builder().leadTime(10).available(0).type(ProductType.NORMAL).name("USB Dongle").build());
+                products.add(Product.builder().leadTime(15).available(30).type(ProductType.EXPIRABLE).name("Butter").expiryDate(now.plusDays(26)).build());
+                products.add(Product.builder().leadTime(90).available(6).type(ProductType.EXPIRABLE).name("Milk").expiryDate(now.minusDays(2)).build());
+                products.add(Product.builder().leadTime(15).available(30).type(ProductType.SEASONAL).name("Watermelon").seasonStartDate(now.minusDays(2)).seasonEndDate(now.plusDays(58)).build());
+                products.add(Product.builder().leadTime(15).available(30).type(ProductType.SEASONAL).name("Grapes").seasonStartDate(now.plusDays(180)).seasonEndDate(now.plusDays(240)).build());
+                products.add(Product.builder().available(30).type(ProductType.FLASHSALE).name("Bed cover sheets").flashSaleStartDate(now.minusDays(2)).flashSaleEndDate(now.plusDays(8)).build());
+                products.add(Product.builder().available(30).type(ProductType.FLASHSALE).name("Lamps").flashSaleStartDate(now.plusDays(2)).flashSaleEndDate(now.plusDays(10)).build());
+                products.add(Product.builder().available(0).type(ProductType.FLASHSALE).name("Lamps").flashSaleStartDate(now.plusDays(2)).flashSaleEndDate(now.plusDays(10)).build());
                 return products;
         }
 }
